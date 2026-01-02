@@ -21,7 +21,7 @@ import { EmergencyPanel } from "./components/EmergencyPanel";
 
 // --- CONFIGURATION ---
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_KEY;
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = "https://hydrosense-project.onrender.com";
 
 const mapContainerStyle = { width: "100%", height: "100%" };
 // Default to Hyderabad if absolutely nothing is known
