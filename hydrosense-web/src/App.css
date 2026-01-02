@@ -1,0 +1,134 @@
+/* src/App.css */
+body, html { margin: 0; padding: 0; height: 100%; font-family: 'Roboto', sans-serif; overflow: hidden; }
+* { box-sizing: border-box; } 
+
+.app-container { position: relative; width: 100vw; height: 100vh; }
+
+/* --- SIDEBAR --- */
+.sidebar {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 380px;
+  max-width: 92vw; /* Prevents overflow on mobile */
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none; 
+}
+
+/* SEARCH CARD */
+.search-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding: 8px 12px;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+
+.inputs-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Fix Input sizing */
+.input-wrapper { width: 100%; }
+.input-wrapper input {
+  border: none;
+  font-size: 15px;
+  padding: 10px 0;
+  width: 100%; /* Ensures it stays within parent */
+  outline: none;
+}
+
+/* Separator Line for Emergency Btn */
+.emergency-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #ddd;
+  margin: 0 5px;
+}
+
+.emergency-icon-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #d93025;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+.emergency-icon-btn:hover { background: #ffebee; }
+
+/* Directions Expansion */
+.directions-results {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  padding: 15px;
+  pointer-events: auto;
+  margin-top: 5px;
+}
+
+.route-card {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+.route-time { font-size: 26px; font-weight: bold; margin-bottom: 5px; }
+.route-meta { color: #666; font-size: 14px; }
+.badge { margin-top: 10px; display: inline-block; padding: 5px 10px; border-radius: 15px; color: white; font-size: 12px; font-weight: bold; }
+.badge-safe { background: #1E8E3E; }
+.badge-danger { background: #EA4335; }
+
+/* Emergency Panel */
+.emergency-panel {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  padding: 20px;
+  pointer-events: auto;
+  border-top: 5px solid #d93025;
+}
+.emergency-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.emergency-grid { display: grid; gap: 10px; }
+.sos-btn { background: #d93025; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; justify-content: center; font-size: 16px; }
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
+.action-item { background: #f8f9fa; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+/* Map & Overlays */
+.map-wrapper { width: 100%; height: 100%; z-index: 1; }
+
+.alt-route-chips {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  background: white; padding: 5px; border-radius: 20px; display: flex; gap: 5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.chip { border: none; background: transparent; color: #555; padding: 5px 15px; border-radius: 15px; cursor: pointer; display: flex; flex-direction: column; alignItems: center; }
+.chip.active { background: #4285F4; color: white; }
+
+.fab-report { position: absolute; bottom: 40px; right: 20px; width: 64px; height: 64px; background: #4285F4; color: white; border-radius: 50%; border: none; font-size: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; }
+.debug-menu { position: absolute; bottom: 40px; left: 20px; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 8px; z-index: 10; display: flex; gap: 5px; }
+.debug-btn { background: #fff; border: 1px solid #ddd; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+/* Blue Dot */
+.blue-dot-container { position: relative; width: 20px; height: 20px; transform: translate(-50%, -50%); }
+.blue-dot { width: 12px; height: 12px; background-color: #4285F4; border: 2px solid white; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.blue-dot-pulse { width: 40px; height: 40px; background-color: rgba(66, 133, 244, 0.4); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1; animation: pulse 2s infinite; }
+@keyframes pulse { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } }
+
+/* Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+.modal-content { background: white; padding: 25px; border-radius: 12px; width: 320px; text-align: center; }
+.upload-box { border: 2px dashed #4285F4; padding: 20px; margin: 15px 0; border-radius: 8px; cursor: pointer; background: #f8f9fa; }
+.submit-btn { background: #4285F4; color: white; border: none; padding: 12px; width: 100%; border-radius: 20px; cursor: pointer; font-weight: bold; }
+.cancel-btn { background: none; border: none; color: #666; margin-top: 10px; cursor: pointer; }
