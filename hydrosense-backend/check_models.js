@@ -1,7 +1,12 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// PASTE YOUR API KEY HERE (from the image you showed)
-const API_KEY = GEN_AI_KEY; 
+// 1. Load the environment variables
+require('dotenv').config(); 
+
+// 2. Access the key correctly using process.env
+const API_KEY = process.env.GEN_AI_KEY; 
+
+console.log("Debug: Key loaded?", API_KEY ? "Yes (starts with " + API_KEY.substring(0,4) + "...)" : "NO - Check .env file");
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 

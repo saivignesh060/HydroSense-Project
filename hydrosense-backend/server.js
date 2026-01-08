@@ -31,7 +31,7 @@ const db = getFirestore();
 // 2. GEMINI AI SETUP
 const GEN_AI_KEY = process.env.GEN_AI_KEY;
 const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 const upload = multer({ storage: multer.memoryStorage() });
 
