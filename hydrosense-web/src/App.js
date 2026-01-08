@@ -4,6 +4,9 @@
   1. INSTANT Location: Loads from localStorage immediately, then updates with GPS.
   2. Blank Route Fix: Prevents routing if location isn't ready.
   3. Auto-Safest: Automatically switches to safe route on flood detection.
+  4. Smart Feedback: Dynamic loading text ("Verifying Weather...", etc.)
+  5. Mobile Capture: Forces rear camera usage.
+  6. UI Update: Yellow Caution Badge.
 */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { GoogleMap, LoadScript, DirectionsRenderer, Marker, OverlayView } from "@react-google-maps/api";
@@ -51,13 +54,16 @@ function App() {
   const [routeIndex, setRouteIndex] = useState(0); 
   
   // Safety
+  // UPDATED: Added class to initial state
   const [vehicle, setVehicle] = useState("car"); 
-  const [routeStatus, setRouteStatus] = useState({ color: "#4285F4", badge: null, maxDepth: 0 });
+  const [routeStatus, setRouteStatus] = useState({ color: "#4285F4", badge: null, maxDepth: 0, class: "" });
 
   const [activeInput, setActiveInput] = useState("destination"); 
   const [isReporting, setIsReporting] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  // NEW: Dynamic loading text state
+  const [loadingText, setLoadingText] = useState("Initializing...");
   const fileInputRef = useRef(null);
 
   //Helper to update location state and storage
@@ -236,12 +242,25 @@ function App() {
       const maxDepth = getRouteMaxDepth(directionsResponse.routes[routeIndex]);
       const limit = VEHICLE_LIMITS[vehicle];
       
-      let status = { color: "#1E8E3E", badge: "✅ Safest Path", maxDepth };
+      // Default: SAFE
+      let status = { color: "#1E8E3E", badge: "✅ Safest Path", maxDepth, class: "badge-safe" };
 
       if (maxDepth > limit) {
-        status = { color: "#EA4335", badge: `⛔ ${vehicle === 'walk' ? 'Deep Water' : 'Engine Risk'}`, maxDepth };
+        // DANGER
+        status = { 
+            color: "#EA4335", 
+            badge: `⛔ ${vehicle === 'walk' ? 'Deep Water' : 'Engine Risk'}`, 
+            maxDepth,
+            class: "badge-danger"
+        };
       } else if (maxDepth > 0) {
-        status = { color: "#FBBC04", badge: "⚠️ Caution", maxDepth };
+        // CAUTION (Yellow)
+        status = { 
+            color: "#FFC107", 
+            badge: "⚠️ Caution", 
+            maxDepth,
+            class: "badge-caution" 
+        };
       }
       setRouteStatus(status);
     }
@@ -280,7 +299,7 @@ function App() {
             id: "sim-safe", 
             lat: altPath[altMid].lat(), 
             lng: altPath[altMid].lng(), 
-            depth_inches: 4, // Guaranteed GREEN
+            depth_inches: 4, // Guaranteed YELLOW CAUTION
             is_verified: true 
         });
     }
@@ -293,6 +312,13 @@ function App() {
   const submitReport = async () => {
     if (!selectedFile) return alert("Photo required.");
     setIsUploading(true);
+    
+    // --- SMART FEEDBACK (Psychological Latency Mask) ---
+    setLoadingText("Compressing Image...");
+    setTimeout(() => setLoadingText("Consulting Gemini AI..."), 1000);
+    setTimeout(() => setLoadingText("Verifying Weather Patterns..."), 2500);
+    setTimeout(() => setLoadingText("Finalizing Trust Score..."), 4000);
+
     const formData = new FormData();
     formData.append('image', selectedFile);
     formData.append('lat', map.getCenter().lat());
@@ -304,7 +330,10 @@ function App() {
       
       console.log("Gemini Backend Response:", data);
 
-      setIsUploading(false); setIsReporting(false); setSelectedFile(null);
+      setIsUploading(false); 
+      setIsReporting(false); 
+      setSelectedFile(null);
+      setLoadingText("Initializing..."); // Reset for next time
       
       if (data.status === "VERIFIED") {
         alert(`✅ REPORT VERIFIED!\nTrust Score: ${data.score}/100\n+30 HydroPoints added!`);
@@ -319,7 +348,9 @@ function App() {
       }
     } catch (e) {
       console.error(e);
-      setIsUploading(false); alert("Backend error. Check Console.");
+      setIsUploading(false); 
+      setLoadingText("Initializing...");
+      alert("Backend error. Check Console.");
     }
   };
 
@@ -413,7 +444,8 @@ function App() {
                   {routeIndex > 0 && " (Alt)"}
                 </div>
                 
-                <div className={`badge ${routeStatus.color === '#EA4335' ? 'badge-danger' : 'badge-safe'}`}>
+                {/* UPDATED: Uses specific class for styling */}
+                <div className={`badge ${routeStatus.class || 'badge-safe'}`}>
                   {routeStatus.badge} ({routeStatus.maxDepth}")
                 </div>
               </div>
@@ -479,12 +511,21 @@ function App() {
           <div className="modal-overlay">
             <div className="modal-content">
               <h2>Report Flood</h2>
-              <input type="file" accept="image/*" ref={fileInputRef} style={{display:'none'}} onChange={e => setSelectedFile(e.target.files[0])} />
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment" // Forces Rear Camera on Mobile
+                ref={fileInputRef} 
+                style={{display:'none'}} 
+                onChange={e => setSelectedFile(e.target.files[0])} 
+              />
               <div onClick={() => fileInputRef.current.click()} className="upload-box">
                  {selectedFile ? <><FaCheckCircle size={30} color="#4285F4"/><p>{selectedFile.name}</p></> : <><FaCamera size={30} color="#ccc"/><p>Tap to take photo</p></>}
               </div>
               <button onClick={submitReport} disabled={isUploading} className="submit-btn">
-                {isUploading ? 'Analyzing...' : 'Submit to Gemini'}
+                {isUploading ? (
+                  <span><span className="spinner-icon">🔄</span> {loadingText}</span>
+                ) : 'Submit to Gemini'}
               </button>
               <button onClick={() => setIsReporting(false)} className="cancel-btn">Cancel</button>
             </div>

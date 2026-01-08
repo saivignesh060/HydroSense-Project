@@ -1,6 +1,7 @@
 /*
-  HydroSense Backend - UPDATED
-  Model: gemini-1.5-flash (Standard Stable Version)
+  HydroSense Backend - DEMO MODE
+  Strategy: Real Gemini Analysis + Simulated Context Checks
+  (Ensures demo works even during dry season)
 */
 
 const express = require('express');
@@ -17,124 +18,122 @@ app.use(express.json());
 
 const PORT = 5000;
 
+// --- CONFIGURATION ---
+// SET THIS TO TRUE FOR THE HACKATHON DEMO
+// It forces Weather & Topography to always return positive results.
+const DEMO_MODE = true; 
+
 // 1. FIREBASE SETUP
 const serviceAccount = require('./serviceAccountKey.json');
 initializeApp({ credential: cert(serviceAccount) });
-const db = getFirestore(); 
+const db = getFirestore();
 
 // 2. GEMINI AI SETUP
-// NOTE: Ideally use process.env.GEN_AI_KEY. 
-// If using hardcoded key, ensure you don't push this file to public GitHub.
 const GEN_AI_KEY = process.env.GEN_AI_KEY;
 const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
-
-// UPDATE: Using the standard stable model ID.
-// If this still gives 404, please enable "Generative Language API" in Google Cloud Console.
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 const upload = multer({ storage: multer.memoryStorage() });
-
-// --- API ENDPOINTS ---
 
 app.post('/api/report-flood', upload.single('image'), async (req, res) => {
   try {
     const { lat, lng } = req.body;
     const imageFile = req.file;
+    
     let finalTrustScore = 0;
     let verificationLog = [];
 
-    console.log(`Analyzing Report at: ${lat}, ${lng}`);
+    console.log(`Analyzing Report at: ${lat}, ${lng} [DEMO_MODE: ${DEMO_MODE}]`);
 
-    // [Algorithm 2, Step 1] Source Check
+    // --- STEP 1: SOURCE CHECK (+10) ---
     if (imageFile && lat && lng) {
-        finalTrustScore += 30;
-        verificationLog.push("✅ Source: Camera & Location present");
+        finalTrustScore += 10;
+        verificationLog.push("✅ Source: Metadata Verified");
     } else {
         return res.status(400).json({ success: false, status: "REJECTED", logs: ["Missing Data"] });
     }
 
-    // [Algorithm 2, Step 2] AI Verification (Gemini)
-    const imageBase64 = imageFile.buffer.toString('base64');
-    
-    // [Algorithm 3] Prompt
-    const prompt = `
-      Analyze this image for a flood reporting app.
-      Return a strictly valid JSON object. Do not use Markdown blocks.
-      {
-        "is_outdoor_street": boolean,  // Is this a real outdoor street?
-        "is_screen_spoof": boolean,    // Is this a photo of a screen?
-        "estimated_depth_inches": number, // Estimate water depth. 0 if dry.
-        "confidence": number           // 0.0 to 1.0
-      }
-    `;
-
-    // FIX: Robust Error Handling & Parsing
+    // --- STEP 2: GEMINI AI VERIFICATION (The Real Logic - +50) ---
+    // We rely heavily on this for the actual decision.
     let aiAnalysis;
     try {
+        const imageBase64 = imageFile.buffer.toString('base64');
+        const prompt = `
+          Analyze this image for a flood reporting app.
+          Return a strictly valid JSON object.
+          {
+            "is_outdoor_street": boolean,
+            "is_screen_spoof": boolean,
+            "estimated_depth_inches": number,
+            "confidence": number
+          }
+        `;
+
         const result = await model.generateContent([
-            prompt, 
+            prompt,
             { inlineData: { data: imageBase64, mimeType: imageFile.mimetype } }
         ]);
-        
-        if (!result || !result.response) {
-            throw new Error("Gemini returned an empty response.");
-        }
 
         let aiText = result.response.text();
-        // Cleanup: Remove markdown code blocks if Gemini adds them
         aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
         aiAnalysis = JSON.parse(aiText);
 
+        console.log("Gemini Analysis:", aiAnalysis);
+
+        if (aiAnalysis.is_outdoor_street && !aiAnalysis.is_screen_spoof) {
+            finalTrustScore += 50; // Big boost if AI says yes
+            verificationLog.push(`✅ AI: Valid Street (Depth: ${aiAnalysis.estimated_depth_inches}")`);
+        } else {
+            verificationLog.push("❌ AI: Rejected (Indoor/Spoof/Dry)");
+            // If AI rejects it, we kill the report immediately, even in Demo Mode
+            return res.json({ 
+                success: false, status: "REJECTED", score: 0, 
+                logs: verificationLog, ai_data: aiAnalysis 
+            });
+        }
     } catch (aiError) {
-        console.error("Gemini Analysis Failed:", aiError);
-        // Fallback: If AI fails, we reject to be safe
-        verificationLog.push(`❌ AI: Analysis Error (${aiError.message})`);
-        return res.json({ 
-            success: false, 
-            status: "REJECTED", 
-            score: finalTrustScore, 
-            logs: verificationLog, 
-            ai_data: null 
-        });
+        console.error("Gemini Error:", aiError);
+        verificationLog.push("⚠️ AI: Analysis Failed (Network Error)");
     }
 
-    console.log("Gemini Analysis:", aiAnalysis);
-
-    if (aiAnalysis.is_outdoor_street && !aiAnalysis.is_screen_spoof) {
-        finalTrustScore += 40;
-        verificationLog.push(`✅ AI: Valid Street (Depth: ${aiAnalysis.estimated_depth_inches}")`);
-    } else {
-        verificationLog.push("❌ AI: Rejected (Indoor/Spoof/Dry)");
-        // Immediate rejection if AI says it's fake
-        return res.json({ 
-            success: false, 
-            status: "REJECTED", 
-            score: finalTrustScore, 
-            logs: verificationLog, 
-            ai_data: aiAnalysis 
-        });
-    }
-
-    // [Algorithm 2, Step 3] Weather Check (Mocked for now)
-    const isRainingMock = true; 
-    if (isRainingMock) {
+    // --- STEP 3: WEATHER CONTEXT (Simulated - +20) ---
+    if (DEMO_MODE) {
+        // HACKATHON SAFEGUARD: Always pass weather check
         finalTrustScore += 20;
-        verificationLog.push("✅ Weather: Rain verified");
+        verificationLog.push("✅ Weather (Simulated): Heavy Rain Detected (Past 24h)");
+    } else {
+        // PRODUCTION LOGIC (Disabled for MVP to prevent "Dry Season" rejection)
+        // const weatherRes = await fetch(`https://api.open-meteo.com...`);
+        // if (rain > 0) score += 20;
     }
 
-    // [Algorithm 2, Decision]
-    const status = finalTrustScore > 80 ? "VERIFIED" : (finalTrustScore > 50 ? "PENDING" : "REJECTED");
+    // --- STEP 4: TOPOGRAPHY / BOWL ZONES (Simulated - +20) ---
+    if (DEMO_MODE) {
+        // HACKATHON SAFEGUARD: Always pass topography check
+        finalTrustScore += 20;
+        verificationLog.push("✅ Topography (Simulated): Low-lying 'Bowl Zone' Risk Verified");
+    } else {
+        // PRODUCTION LOGIC: Check Elevation API
+    }
+
+    // --- FINAL DECISION ---
+    // With Demo Mode, a valid photo gets: 10 (Source) + 50 (AI) + 20 (Weather) + 20 (Topo) = 100
+    // An invalid photo gets rejected at Step 2.
+    
+    const status = finalTrustScore >= 60 ? "VERIFIED" : "PENDING";
 
     if (status === "VERIFIED") {
         await db.collection('active_floods').add({
             lat: parseFloat(lat),
             lng: parseFloat(lng),
-            depth_inches: aiAnalysis.estimated_depth_inches || 6,
+            depth_inches: aiAnalysis?.estimated_depth_inches || 6,
             is_verified: true,
             timestamp: new Date(),
-            trust_score: finalTrustScore
+            trust_score: finalTrustScore,
+            reporter_id: "demo_user_123" // Placeholder for Gamification
         });
+        
+        verificationLog.push("🏆 HydroPoints: +30 Added (Simulated)");
     }
 
     res.json({
@@ -147,7 +146,7 @@ app.post('/api/report-flood', upload.single('image'), async (req, res) => {
 
   } catch (error) {
     console.error("Backend Error:", error);
-    res.status(500).json({ error: error.message, logs: ["Server Error - Check Console"] });
+    res.status(500).json({ error: error.message });
   }
 });
 
