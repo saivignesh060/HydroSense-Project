@@ -2,10 +2,11 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// --- PASTE YOUR FIREBASE CONFIG HERE ---
-// It should look like this (but with your actual keys):
 const firebaseConfig = {
-  apiKey: "AIzaSyB1pQjNrTVj-J0V19WVIt75VL-IqjF1dR8",
+  // Use the environment variable, NOT the hardcoded string
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY, 
+  
+  // These non-secret values can stay hardcoded or moved to .env (up to you)
   authDomain: "project1-dc433.firebaseapp.com",
   projectId: "project1-dc433",
   storageBucket: "project1-dc433.firebasestorage.app",
