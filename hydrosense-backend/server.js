@@ -31,6 +31,7 @@ const db = getFirestore();
 // 2. GEMINI AI SETUP
 const GEN_AI_KEY = process.env.GEN_AI_KEY;
 const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
+// Keeping gemini-2.5-flash as requested
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -60,10 +61,15 @@ app.post('/api/report-flood', upload.single('image'), async (req, res) => {
         const imageBase64 = imageFile.buffer.toString('base64');
         const prompt = `
           Analyze this image for a flood reporting app.
-          Return a strictly valid JSON object.
+          
+          Determine if there is SIGNIFICANT water accumulation (puddles, submerged road, flooding).
+          If the street is dry, or just damp/wet from rain but without standing water, set "is_flooded" to false and depth to 0.
+
+          Return a strictly valid JSON object:
           {
             "is_outdoor_street": boolean,
             "is_screen_spoof": boolean,
+            "is_flooded": boolean,
             "estimated_depth_inches": number,
             "confidence": number
           }
@@ -75,22 +81,33 @@ app.post('/api/report-flood', upload.single('image'), async (req, res) => {
         ]);
 
         let aiText = result.response.text();
+        // Clean up markdown formatting if Gemini adds it
         aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
         aiAnalysis = JSON.parse(aiText);
 
         console.log("Gemini Analysis:", aiAnalysis);
 
-        if (aiAnalysis.is_outdoor_street && !aiAnalysis.is_screen_spoof) {
-            finalTrustScore += 50; // Big boost if AI says yes
-            verificationLog.push(`✅ AI: Valid Street (Depth: ${aiAnalysis.estimated_depth_inches}")`);
-        } else {
-            verificationLog.push("❌ AI: Rejected (Indoor/Spoof/Dry)");
-            // If AI rejects it, we kill the report immediately, even in Demo Mode
-            return res.json({ 
+        // CHECK A: Is it a valid environment? (Must be outdoor street, not a screen)
+        if (!aiAnalysis.is_outdoor_street || aiAnalysis.is_screen_spoof) {
+             verificationLog.push("❌ AI: Rejected (Indoor/Screen Spoof)");
+             // Immediate rejection for invalid photos
+             return res.json({ 
                 success: false, status: "REJECTED", score: 0, 
                 logs: verificationLog, ai_data: aiAnalysis 
             });
         }
+
+        // CHECK B: Is there actually a flood?
+        if (aiAnalysis.is_flooded && aiAnalysis.estimated_depth_inches > 0) {
+            finalTrustScore += 50; // Big boost ONLY if water is found
+            verificationLog.push(`✅ AI: Flood Detected (Depth: ${aiAnalysis.estimated_depth_inches}")`);
+        } else {
+            // It is a street, but it is DRY. We do NOT add the 50 points.
+            // This leaves the score at 10 (Metadata) + 40 (Simulated Context) = 50.
+            // 50 is < 60, so it will remain PENDING/REJECTED.
+            verificationLog.push("⚠️ AI: Street is Dry/Normal (No Flood)");
+        }
+
     } catch (aiError) {
         console.error("Gemini Error:", aiError);
         verificationLog.push("⚠️ AI: Analysis Failed (Network Error)");
@@ -117,8 +134,8 @@ app.post('/api/report-flood', upload.single('image'), async (req, res) => {
     }
 
     // --- FINAL DECISION ---
-    // With Demo Mode, a valid photo gets: 10 (Source) + 50 (AI) + 20 (Weather) + 20 (Topo) = 100
-    // An invalid photo gets rejected at Step 2.
+    // Calculation for DRY Street: 10 (Source) + 0 (AI) + 20 (Weather) + 20 (Topo) = 50 (PENDING)
+    // Calculation for FLOODED Street: 10 (Source) + 50 (AI) + 20 (Weather) + 20 (Topo) = 100 (VERIFIED)
     
     const status = finalTrustScore >= 60 ? "VERIFIED" : "PENDING";
 
