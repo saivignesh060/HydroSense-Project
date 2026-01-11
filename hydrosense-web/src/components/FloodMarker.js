@@ -31,7 +31,7 @@ const FloodMarker = ({ flood, vehicleType }) => {
             <p><strong>Verified:</strong> {flood.is_verified ? "✅ Yes" : "⚠️ Pending"}</p>
             {status.color === "red" && (
               <div style={{ background: "#ffebee", padding: "5px", borderRadius: "4px", marginTop: "5px", fontSize: "12px", color: "#c62828", fontWeight: "bold" }}>
-                ⛔ IMPASSABLE for {vehicleType}
+                ⛔ IMPOSSIBLE for {vehicleType}
               </div>
             )}
           </div>
