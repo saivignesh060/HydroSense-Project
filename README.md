@@ -91,7 +91,7 @@ npm start
 
 Switch between **Bike**, **Car**, and **SUV**. Watch the route safety badge change from **Green (Safe)** to **Red (Engine Risk)** instantly based on your vehicle's ground clearance.
 
-![][image1]
+![image1](Key_Feature_Images_For_Readme/image1.png)
 
 ### **2\. AI-Powered Reporting**
 
@@ -102,11 +102,11 @@ Upload a photo of a street. Our backend:
 3. Gemini analyzes visual depth (e.g., "Water covers the curb").  
 4. Returns a **Trust Score**.
 
-![][image2]
+![image2](Key_Feature_Images_For_Readme/image2.png)
 
 **Valid Upload(Accepted)**
 
-![][image3]
+![image3](Key_Feature_Images_For_Readme/image3.png)
 
 **Invalid Upload(Rejected)**
 
@@ -114,11 +114,11 @@ Upload a photo of a street. Our backend:
 
 If a verified report blocks the route, HydroSense prioritizes safer alternatives; if all available routes still carry flood risk, the system clearly surfaces the risk level and lets users make an informed decision.
 
-![][image4]
+![image4](Key_Feature_Images_For_Readme/image4.png)
 
 **No Flood Points**
 
-![][image5]
+![image5](Key_Feature_Images_For_Readme/image5.png)
 
 **Safe Rerouting During Flood Points**
 
